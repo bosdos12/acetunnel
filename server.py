@@ -4,21 +4,27 @@ from flask_cors import CORS
 from hashlib import sha256
 import uuid
 
-
-
 app = flask.Flask(__name__)
 CORS(app)
-
 
 our_users = [
     {"email": "awk", "password": "4a52340305bdd3b0c25b282c12d6e94b2fe8351b5146b756edcaca4a085b521b"}
 ]
 
-requests_queue = []
-responses_pool = []
 
-def validate_userF(email, password):
-    hashed_pass = sha256(password.encode("utf-8")).hexdigest()
+sessions_list  = [] # session_name, session_owner (email)
+requests_queue = [] # full_request, request_id, session_name, app_route
+responses_pool = [] # response_id, response
+
+def validate_userF(email, password, check_if):
+
+    # if its a check_if_user_exists request, the data is already hashed on clients device;
+    # if its a normal login request, normal password is entered, so hash
+    if check_if:
+        hashed_pass = password
+    else:
+        hashed_pass = sha256(password.encode("utf-8")).hexdigest()
+    
     for user in our_users:
         print(user)
         if user["email"] == email and user["password"] == hashed_pass:
@@ -28,29 +34,32 @@ def validate_userF(email, password):
     return False
 
 # we are so smart we will literally just send the request to the other server :)
-def validate_app_exists(app_name):
-    print(app_name);
+def validate_session_exists(session_name):
+    for session in sessions_list:
+        if session_name == str(session["session_name"]):
+            return True
+    return False
 
-def add_request_to_queueF(full_request, app_name, app_route):
-    print(full_request)
+def add_request_to_queueF(full_request, session_name, app_route):
     request_id = uuid.uuid4()
     requests_queue.append({
         "full_request": full_request,
         "request_id": request_id,
-        "app_name": app_name,
+        "session_name": session_name,
         "app_route": app_route
-        
     })
     
     return request_id
 
-def delete_request_from_query(request_id):
+def delete_request_from_queue(request_id):
     request_index = 0
     for request in requests_queue:
         if str(request["request_id"]) == str(request_id):
             del requests_queue[request_index]
             break
 
+# will fetch the response from the pool with id,
+# return it, and delete it from pool
 def get_response_from_pool(request_id):
     while True:
         response_index = 0
@@ -58,27 +67,53 @@ def get_response_from_pool(request_id):
             print(str(request_id) + " " + str(response["response_id"]))
             if str(response["response_id"]) == str(request_id):
                 del responses_pool[response_index]
-                delete_request_from_query(request_id)
+                delete_request_from_queue(request_id)
                 return response["response"]
             response_index += 1
 
-@app.route("/<path:app_name>/<path:app_route>")
-def app_page(app_name, app_route):
-    
+# Endpoint that will act as the tunnel,
+# first parameter is the session id, second path is the request path.
+# It will create request queue, and once response is in pool, the response will be served.
+# Empty app_route handler.
+@app.route("/<session_name>/")
+def session_no_route(session_name):
+    print("session no route")
+    return app_page(session_name, "")
+# Wildcard route
+@app.route("/<session_name>/<path:app_route>")
+def app_page(session_name, app_route):
+    print(session_name)
+    print(app_route)
+    print(sessions_list)
     # Make sure there is an app with the given name
-    validate_app_exists(app_name)
-    
+    print(111)
+    if validate_session_exists(session_name):
+        print(222)
+        # Add the request to the queue
+        # print(flask.request.method + " " + app_route + flask.request.environ.get("SERVER_PROTOCOL"))
+        request_id = add_request_to_queueF(flask.request, session_name, app_route)
+        
+        print(333)
+        # Wait until request is on the responses pool and return when here
+        return get_response_from_pool(request_id)
+    else:
+        return f"<p>There are no sessions with the name of [{session_name}]</p>", 400
 
-    # Add the request to the queue
-    # print(flask.request.method + " " + app_route + flask.request.environ.get("SERVER_PROTOCOL"))
-    request_id = add_request_to_queueF(flask.request, app_name, app_route)
-    
-    # Wait until request is on the responses pool and return when here
-    return get_response_from_pool(request_id)
-
-@app.get("/test")
-def lil_test():
-    return "<h1>sdfgfg</h1>";
+@app.post("/create_session")
+def create_session():
+    data = flask.request.get_json()
+    if "email" not in data or "password" not in data:
+        return flask.jsonify({"validity": False, "cause": "email and password needed"}), 400
+    else:
+        if validate_userF(data["email"], data["password"], True):
+            session_name = uuid.uuid4()
+            sessions_list.append({
+                "session_name": session_name,
+                "session_owner": data["email"]
+            })
+            return flask.jsonify({"validity": True, "session_name": session_name}), 200
+        else:
+            return flask.jsonify({"validity": False, "cause": "Auth Failed."}), 400
 
 @app.post("/add_to_responses_pool")
 def add_to_responses_pool():
@@ -95,12 +130,18 @@ def add_to_responses_pool():
 @app.post('/login')
 def login():
     # Get JSON data from the request body
-    data = request.get_json()
+    data = flask.request.get_json()
     print(data)
+
+    if "check_if" not in data:
+        data["check_if"] = False
+    
+    print(data)    
+
     if "email" not in data or "password" not in data:
         return flask.jsonify({"validity": False, "cause": "email and password needed"}), 400
     else:
-        if validate_userF(data["email"], data["password"]):
+        if validate_userF(data["email"], data["password"], data["check_if"]):
             return flask.jsonify({"validity": True}), 200
         else:
             return flask.jsonify({"validity": False, "cause": "Auth failed."}), 400
@@ -115,9 +156,9 @@ def metrics():
         requestsqueuemetrics += f"""
             <div class="metriclistitem">
                 <div class="metricitembox"><p>{request["request_id"]}</p></div>
-                <div class="metricitembox"><p>{request["app_name"]}</p></div>
+                <div class="metricitembox"><p>{request["session_name"]}</p></div>
                 <div class="metricitembox"><p>{request["app_route"]}</p></div>
-            <div>
+            </div>
         """
     
     print(responses_pool)
@@ -126,7 +167,7 @@ def metrics():
             <div class="metriclistitem">
                 <div class="metricitembox"><p>{response["response_id"]}</p></div>
                 <div class="metricitembox"><p>{response["response"]}</p></div>
-            <div>
+            </div>
         """
 
 
