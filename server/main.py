@@ -44,13 +44,23 @@ def add_request_to_queueF(full_request, app_name, app_route):
     
     return request_id
 
-    
+def delete_request_from_query(request_id):
+    request_index = 0
+    for request in requests_queue:
+        if str(request["request_id"]) == str(request_id):
+            del requests_queue[request_index]
+            break
+
 def get_response_from_pool(request_id):
     while True:
+        response_index = 0
         for response in responses_pool:
             print(str(request_id) + " " + str(response["response_id"]))
             if str(response["response_id"]) == str(request_id):
+                del responses_pool[response_index]
+                delete_request_from_query(request_id)
                 return response["response"]
+            response_index += 1
 
 @app.route("/<path:app_name>/<path:app_route>")
 def app_page(app_name, app_route):
@@ -73,11 +83,11 @@ def lil_test():
 @app.post("/add_to_responses_pool")
 def add_to_responses_pool():
     data = flask.request.get_json()
-    if "request_id" not in data:
-        return flask.jsonify({"validity": False, "": "Request ID Required"}), 400
+    if "request_id" not in data or "response" not in data:
+        return flask.jsonify({"validity": False, "": "Request ID and Response Body Required"}), 400
     responses_pool.append({
         "response_id": data["request_id"],
-        "response": "<h1>wattafakkkkkk</h1>"
+        "response": data["response"]
     })
     return {}, 200
 
