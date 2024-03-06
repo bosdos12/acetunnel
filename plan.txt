@@ -1,0 +1,48 @@
+Acetunnel is a simple http gateway tunnel which offers following:
+1. Public endpoint to locally hosted servers
+2. easy command line interface
+3. basic logging functionality
+4. basic statistics functionality
+
+
+1. Tunnel:
+acetunnel will be a cli tool that works in unison with its public endpoint.
+it will run on localhost by calling "acetunnel [protocol] [port]", and then, the 
+local client will create & assign the private endpoint a public endpoint.
+All requests going to the public endpoint will then be communicated to the 
+client software through an internal queuing system containing the 
+request body and request id.
+The client will call the local server with the request body.
+after the request is complete, the client will call the request complete API,
+which will get the response body,
+
+Through internal queing in the server the request complete api will
+trigger the response of the public endpoint to be sent, and it will
+have the complete response object.
+
+
+
+
+
+
+
+
+Functionality musts:
+Server:
+	1. Login Functionalities. Passwords are stored hashed
+	2. Async public tunnel that puts requests on requests queue
+	3. API where queued requests can be parsed by id
+	4. API to store responses
+	5. API to parse responses by ID (server try/fails till receiving)
+	
+	
+Client:
+	1. Login command        - acetunnel login [email] [password]
+	2. Start client command - acetunnel http [port] [options] -auth? [pass]?
+	3. Live server & Tunnel - acetunnel server [port] -auth? [pass]? (init live-server in pwd & tunnel)
+	
+	
+	
+HTTP Client implemented.
+Site visit auth implemented.
+
