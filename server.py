@@ -91,7 +91,7 @@ def app_page(session_name, app_route):
         print(222)
         # Add the request to the queue
         # print(flask.request.method + " " + app_route + flask.request.environ.get("SERVER_PROTOCOL"))
-        request_id = add_request_to_queueF(flask.request, session_name, app_route)
+        request_id = add_request_to_queueF(flask.request,   session_name, app_route)
         
         print(333)
         # Wait until request is on the responses pool and return when here

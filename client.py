@@ -48,6 +48,17 @@ def get_user_data():
         return False
 
 
+
+def add_response_to_pool(email, password, request_id, response):
+    print("\n\n\nadd to respones pool")
+    print(email)        
+    print(password)
+    print(request_id)
+    print(response)
+
+
+    # NOte - deal with this bullshit later
+
 def start_http_tunnel(server_port):
     
     user_data = get_user_data()
@@ -74,8 +85,22 @@ def start_http_tunnel(server_port):
                 
                 # NOTE - Deal with this shit right here when you wake up
                 # project almost done u got this
+                print(queued_request_json)  
                 
-                print(f"{queued_request_json['method']} /{queued_request_json['app_route']}")
+                # note implemet full proxy features in the future.
+                # for now just test if the GET request functionality works
+                # NOTE - headers & data implemented later
+                local_request_response = requests.get(f"http://127.0.0.1:{server_port}/index.html")
+                print(local_request_response)
+
+                add_response_to_pool(
+                                    user_data[0],
+                                    user_data[1],
+                                    str(queued_request_json["request_id"]),
+                                    local_request_response)              
+
+
+                # print(f"{queued_request_json['method']} /{queued_request_json['app_route']}")
             time.sleep(0.1)
     else:
         print(session_creation_response_json["cause"])
