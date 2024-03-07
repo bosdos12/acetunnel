@@ -2,8 +2,6 @@ import sys
 import json
 from hashlib import sha256
 import requests
-import time
-
 
 server_url = "http://127.0.0.1:5000/"
 
@@ -48,6 +46,7 @@ def get_user_data():
         return False
 
 
+
 def start_http_tunnel(server_port):
     
     user_data = get_user_data()
@@ -55,30 +54,14 @@ def start_http_tunnel(server_port):
 
 
     # Create the public endpoint session
-    session_creation_response = requests.post(f"{server_url}create_session", json={
-                                                                                "email": user_data[0],
-                                                                                "password": user_data[1]
-                                                                                })
+    session_creation_response = requests.post(f"{server_url}create_session", json={})
     session_creation_response_json = session_creation_response.json()
-    print(f"Local Server  | http://localhost:{server_port}/\nPublic Tunnel | {server_url}{session_creation_response_json['session_name']}")
-    if session_creation_response_json["validity"]:
-        # Start the event listener loop which will track all the new requests and request them locally.
-        while True:
-            queued_request = requests.post(f"{server_url}get_session_request_from_queue", json={
-                                                                                                "session_name": session_creation_response_json["session_name"],
-                                                                                                "email": user_data[0],
-                                                                                                "password": user_data[1]
-                                                                                            }) 
-            queued_request_json = queued_request.json()
-            if queued_request_json["validity"]:
-                
-                # NOTE - Deal with this shit right here when you wake up
-                # project almost done u got this
-                
-                print(f"{queued_request_json['method']} /{queued_request_json['app_route']}")
-            time.sleep(0.1)
-    else:
-        print(session_creation_response_json["cause"])
+
+    # Start the event listener loop which
+    # will track all the new requests and request them locally.
+    while True:
+        for request in         
+        print("HTTP TUNNELLLLL")
 
 def print_available_commands():
     print("Available commands:\n login [email] [password]\n acetunnel http [port] [options] -auth? [pass]?\n acetunnel server [port] -auth? [pass]?")

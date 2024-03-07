@@ -115,16 +115,58 @@ def create_session():
         else:
             return flask.jsonify({"validity": False, "cause": "Auth Failed."}), 400
 
+# Sends the first request from the queue that matches the session_id
+# Which lets the client application to create an internal request,
+# and then post it on the add_to_responses_pool api
+@app.post("/get_session_request_from_queue")
+def get_session_request_from_queue():
+    data = flask.request.get_json()
+
+    if "session_name" not in data or "email" not in data or "password" not in data:
+        return {"validity": False, "cause": "session_name, email and password are required"}, 400
+    else:
+        print(data)
+        if validate_session_exists(data["session_name"]):
+            print("session existss daaa!")
+            print(requests_queue)
+            for queued_request in requests_queue:
+                if str(queued_request["session_name"]) == data["session_name"]:
+                    # Cant return the entire request sadly as
+                    # "TypeError: Object of type LocalProxy is not JSON serializable"
+                    # so just get the headers, body, requesttype from request
+                    # and give those as individual properties that will be used together.
+                    # to create the request object on the client app
+                    return {
+                            "method": queued_request["full_request"].method,
+                            "headers": {key: value for key, value in queued_request["full_request"].headers if key != 'Host'},
+                            "data": queued_request["full_request"].get_data(as_text=True),
+                            "request_id": queued_request["request_id"],
+                            "app_route": queued_request["app_route"],
+                            "validity": True
+                    }, 200
+
+        else:
+            return {"validity": False, "cause": "The session doesn't exist"}, 400
+
+    return {"validity": False, "cause": "No pending requests in the queue of this session"}, 404
 @app.post("/add_to_responses_pool")
 def add_to_responses_pool():
     data = flask.request.get_json()
     if "request_id" not in data or "response" not in data:
-        return flask.jsonify({"validity": False, "": "Request ID and Response Body Required"}), 400
-    responses_pool.append({
-        "response_id": data["request_id"],
-        "response": data["response"]
-    })
-    return {}, 200
+        return flask.jsonify({"validity": False, "cause": "Request ID and Response Body Required"}), 400
+    else:
+        if "email" not in data or "password" not in data:
+            return {"validity": False, "cause": "email and password needed ;)"}, 400
+        else:
+            # if validate user, davai, if not, niet davai cyka pidarac
+            if validate_userF(data["email"], data["password"], True):
+                responses_pool.append({
+                    "response_id": data["request_id"],
+                    "response": data["response"]
+                })
+                return {}, 200
+            else:
+                return {"validity": False, "cause": "Auth Failed."}, 400
 
 
 @app.post('/login')
