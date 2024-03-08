@@ -63,12 +63,16 @@ def delete_request_from_queue(request_id):
 def get_response_from_pool(request_id):
     while True:
         response_index = 0
-        for response in responses_pool:
-            print(str(request_id) + " " + str(response["response_id"]))
-            if str(response["response_id"]) == str(request_id):
+        for response_data in responses_pool:
+            print(str(request_id) + " " + str(response_data["response_id"]))
+            if str(response_data["response_id"]) == str(request_id):
                 del responses_pool[response_index]
                 delete_request_from_queue(request_id)
-                return response["response"]
+                response_object = flask.Response(
+                    response=response_data['response_text'],
+                    status=response_data['response_status_code'],
+                    headers=response_data['response_headers'])
+                return response_object
             response_index += 1
 
 # Endpoint that will act as the tunnel,
@@ -152,8 +156,8 @@ def get_session_request_from_queue():
 @app.post("/add_to_responses_pool")
 def add_to_responses_pool():
     data = flask.request.get_json()
-    if "request_id" not in data or "response" not in data:
-        return flask.jsonify({"validity": False, "cause": "Request ID and Response Body Required"}), 400
+    if "request_id" not in data or "response_headers" not in data or "response_status_code" not in data or "response_text" not in data:
+        return flask.jsonify({"validity": False, "cause": "request_id, response_headers, response_status_code, response_text are required attributes for adding to pool."}), 400
     else:
         if "email" not in data or "password" not in data:
             return {"validity": False, "cause": "email and password needed ;)"}, 400
@@ -162,7 +166,9 @@ def add_to_responses_pool():
             if validate_userF(data["email"], data["password"], True):
                 responses_pool.append({
                     "response_id": data["request_id"],
-                    "response": data["response"]
+                    "response_headers": data["response_headers"],
+                    "response_status_code": data["response_text"],
+                    "response_text": data["response_text"]
                 })
                 return {}, 200
             else:

@@ -57,8 +57,21 @@ def add_response_to_pool(email, password, request_id, response):
     print(response)
 
 
-    # NOte - deal with this bullshit later
+    add_to_response_res = requests.post(f"{server_url}add_to_responses_pool", json={
+                                        "request_id": request_id,
+                                        "response_headers": dict(response.headers),
+                                        "response_status_code": response.status_code,
+                                        "response_text": response.text,
+                                        "email": email,
+                                        "password": password
+                                                                })
+    
+    add_to_response_res_json = add_to_response_res.json()
 
+    print(add_to_response_res_json)
+
+    
+    
 def start_http_tunnel(server_port):
     
     user_data = get_user_data()
@@ -87,10 +100,12 @@ def start_http_tunnel(server_port):
                 # project almost done u got this
                 print(queued_request_json)  
                 
+                app_route = "/" if queued_request_json["app_route"] == "" else queued_request_json["app_route"]                
+
                 # note implemet full proxy features in the future.
                 # for now just test if the GET request functionality works
                 # NOTE - headers & data implemented later
-                local_request_response = requests.get(f"http://127.0.0.1:{server_port}/index.html")
+                local_request_response = requests.get(f"http://127.0.0.1:{server_port}/{app_route}")
                 print(local_request_response)
 
                 add_response_to_pool(
