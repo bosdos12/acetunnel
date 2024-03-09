@@ -3,7 +3,7 @@ import json
 from hashlib import sha256
 import requests
 import time
-
+import os
 
 server_url = "http://127.0.0.1:5000/"
 
@@ -120,8 +120,15 @@ def start_http_tunnel(server_port):
     else:
         print(session_creation_response_json["cause"])
 
+def start_server_and_http_tunnel(server_location, server_port):
+    print(f"Starting local server on port: {server_port}")
+    os.system('gnome-terminal -- bash -c "live-server --port={server_port} ; exec bash"')
+    print(f"Local server started on port: {server_port}")    
+    
+    start_http_tunnel(server_port)
+    
 def print_available_commands():
-    print("Available commands:\n login [email] [password]\n acetunnel http [port] [options] -auth? [pass]?\n acetunnel server [port] -auth? [pass]?")
+    print("Available commands:\n login [email] [password]\n acetunnel http [port] [options] -auth? [pass]?\n acetunnel server [port] [server_directory] -auth? [pass]?")
 
 if __name__ == "__main__":
     print(sys.argv)
@@ -144,7 +151,7 @@ if __name__ == "__main__":
             please_login_syntax()
     elif sys.argv[1] == "acetunnel" and len(sys.argv) <= 2:
         if check_if_logged_in():
-            print("Available options:\nhttp   | usage: http [port] [options] -auth? [pass]? \nserver | usage: server [port] -auth? [pass]?")
+            print("Available options:\nhttp   | usage: http [port] [options] -auth? [pass]? \nserver | usage: server [port] [server_directory] -auth? [pass]?")
     elif sys.argv[1] == "acetunnel" and len(sys.argv) > 3:
         if check_if_logged_in():
             server_port = sys.argv[3]
@@ -153,8 +160,11 @@ if __name__ == "__main__":
                 start_http_tunnel(server_port)
             
             elif sys.argv[2] == "server":
-                # do it later. not critical for mvp
-                print("server")
+                if len(sys.argv) > 4:
+                    # do it later. not critical for mvp
+                    start_server_and_http_tunnel(sys.argv[4]server_port)
+                else:
+                    print("Invalid commands or syntax")
     else:
         print("Invalid commands or syntax")
         print_available_commands()
