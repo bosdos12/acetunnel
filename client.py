@@ -122,7 +122,7 @@ def start_http_tunnel(server_port):
 
 def start_server_and_http_tunnel(server_location, server_port):
     print(f"Starting local server on port: {server_port}")
-    os.system('gnome-terminal -- bash -c "live-server --port={server_port} ; exec bash"')
+    os.system(f'gnome-terminal -- bash -c "cd {server_location} && live-server --port={server_port} ; exec bash"')
     print(f"Local server started on port: {server_port}")    
     
     start_http_tunnel(server_port)
@@ -162,9 +162,9 @@ if __name__ == "__main__":
             elif sys.argv[2] == "server":
                 if len(sys.argv) > 4:
                     # do it later. not critical for mvp
-                    start_server_and_http_tunnel(sys.argv[4]server_port)
+                    start_server_and_http_tunnel(sys.argv[4], server_port)
                 else:
-                    print("Invalid commands or syntax")
+                    print("Missing options for server command\n server | usage: server [port] [server_directory] -auth? [pass]?")
     else:
         print("Invalid commands or syntax")
         print_available_commands()
